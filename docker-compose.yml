@@ -1,0 +1,72 @@
+version: "3.5"
+
+services:
+  floto:
+    container_name: floto_web
+    image: ghcr.io/uchicago-floto/dashboard:${FLOTO_DASHBOARD_TAG}
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./media:/media
+      - ./keys:/keys
+      - static:/static
+    entrypoint: ["python3", "manage.py"]
+    command: ["runserver", "0.0.0.0:80"]
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`portal.floto.science`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=myresolver"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=80"
+      - "traefik.http.services.dashboard.loadbalancer.server.scheme=http"
+
+  static_files:
+    image: nginx
+    restart: always
+    volumes:
+      - static:/usr/share/nginx/html/static
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.static.rule=Host(`portal.floto.science`) && Pathprefix(`/static`)"
+      - "traefik.http.routers.static.entrypoints=websecure"
+      - "traefik.http.routers.static.tls=true"
+      - "traefik.http.routers.static.tls.certresolver=myresolver"
+      - "traefik.http.services.static.loadbalancer.server.port=80"
+      - "traefik.http.services.static.loadbalancer.server.scheme=http"
+
+  db:
+    container_name: floto_db
+    image: mariadb:${DB_IMG_TAG}
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - /var/lib/mysql:/var/lib/mysql
+
+  reverse-proxy:
+    image: traefik:v2.9
+    restart: always
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=security@floto.science"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "443:443"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  static:
