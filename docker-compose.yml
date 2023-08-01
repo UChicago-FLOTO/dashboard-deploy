@@ -68,5 +68,20 @@ services:
       - "./letsencrypt:/letsencrypt"
       - /var/run/docker.sock:/var/run/docker.sock
 
+  domain_root_web:
+    image: nginx
+    restart: always
+    volumes:
+      - /home/ubuntu/portal-deploy/domain_root/static:/usr/share/nginx/html
+      - /home/ubuntu/portal-deploy/domain_root/nginx.conf:/etc/nginx/nginx.conf:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.domain_root.rule=Host(`floto.science`)"
+      - "traefik.http.routers.domain_root.entrypoints=websecure"
+      - "traefik.http.routers.domain_root.tls=true"
+      - "traefik.http.routers.domain_root.tls.certresolver=myresolver"
+      - "traefik.http.services.domain_root.loadbalancer.server.port=80"
+      - "traefik.http.services.domain_root.loadbalancer.server.scheme=http"
+
 volumes:
   static:
