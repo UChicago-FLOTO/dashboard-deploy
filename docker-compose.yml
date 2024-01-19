@@ -83,5 +83,23 @@ services:
       - "traefik.http.services.domain_root.loadbalancer.server.port=80"
       - "traefik.http.services.domain_root.loadbalancer.server.scheme=http"
 
+  redis: # Used for celery tasks
+    image: redis:alpine
+
+  celery:
+    container_name: floto_tasks
+    image: ghcr.io/uchicago-floto/dashboard:${FLOTO_DASHBOARD_TAG}
+    restart: on-failure
+    entrypoint: ["celery"]
+    command:
+      ["-A", "floto", "worker", "-l", "INFO", "--concurrency=1", "-B"]
+    env_file:
+      - .env
+    volumes:
+      - ./config:/config
+    depends_on:
+      - db
+      - redis
+
 volumes:
   static:
