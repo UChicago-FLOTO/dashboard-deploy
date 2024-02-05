@@ -3,3 +3,4 @@ keys/
 letsencrypt/
 media/
 .env
+config/

@@ -11,8 +11,9 @@ services:
       - ./media:/media
       - ./config:/config
       - static:/static
-    entrypoint: ["python3", "manage.py"]
-    command: ["runserver", "0.0.0.0:80"]
+    #entrypoint: ["python3", "manage.py"]
+    #command: ["runserver", "0.0.0.0:80"]
+    command: ["gunicorn", "--max-requests", "1000", "--max-requests-jitter", "50", "floto.wsgi", "--bind=0.0.0.0:80", "--capture-output", "--access-logfile" ,"-" ]
     depends_on:
       - db
     labels:
